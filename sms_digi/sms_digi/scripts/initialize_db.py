@@ -52,7 +52,6 @@ def main(argv=sys.argv):
     try:
         db = engine_from_config(settings, prefix='sqlalchemy.')
         print("Database initializing in-progress.")
-        print(settings)
         import configparser
         config = configparser.ConfigParser()
         config.read(args.config_uri)

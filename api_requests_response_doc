@@ -1,0 +1,118 @@
+API Documentation:
+1. Login api to get authorized user's token. Note this user is hard coded. Credentials matched from DB.
+   Request:
+   Method: GET
+   url: http://localhost:6543/login
+   Response:
+   {
+    "result": "ok",
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOjEsImlhdCI6MTYwNjY0NjczOH0.ClBGRrtGZpg1Oic1rhixzrUNxa3fmlRLbmi-M-okOx3SqlkxXvqv_Vj2ocJCCF-QlnqT-R3YgKFmQhyJ0HsURg"
+	}
+
+Use this Bearer token as authorization key for  all other APIs
+
+2. Get all Chemicals
+   Request:
+   Method: GET
+   url: http://localhost:6543/get-all-chemicals
+   Response:
+   {
+    "List of chemicals: ": [
+        {
+            "id": 1,
+            "name": "C"
+        },
+        {
+            "id": 2,
+            "name": "N"
+        },
+        {
+            "id": 3,
+            "name": "O"
+        },
+        {
+            "id": 4,
+            "name": "AI"
+        },
+        {
+            "id": 0,
+            "name": "UNKNOWN"
+        }
+    ]
+}
+
+3. Get Commodities by ID:
+   Request:
+   Method: GET
+   url: http://localhost:6543/get-commodity-by-id/1
+   Response:
+	{
+		"Commodity Details: ": {
+			"id": 1,
+			"name": "Plate & Structural",
+			"inventory": 200,
+			"price": 20.5,
+			"json_agg": [
+				{
+					"id": 1,
+					"name": "C",
+					"percentage": 25
+				},
+				{
+					"id": 2,
+					"name": "N",
+					"percentage": 25
+				},
+				{
+					"id": 0,
+					"name": "UNKNOWN",
+					"percentage": 50
+				}
+			]
+		}
+}
+
+
+4. Update commodity by id:
+   Request:
+   Method: PUT
+   url: http://localhost:6543/update-commodity-by-id
+   request body:
+   {
+    "id":1,
+    "name": "Check update",
+    "inventory":100
+	}
+   Response:
+	{
+    "message": "Commodity updated Successfully"
+	}
+
+5. Remove composition by id:
+   Request:
+   Method: PUT
+   url: http://localhost:6543/update-commodity-by-id
+   request body:
+   {
+    "commodity_id": 1,
+    "element_id": 1
+	}
+
+	{
+    "message": "Composition removed Successfully."
+	}
+
+6. Add composition by id:
+  Request:
+   Method: PUT
+   url: http://localhost:6543/add-composition-by-id
+   request body:
+	{
+		"commodity_id": 1,
+		"element_id": 1,
+		"percentage":20
+	}
+	Response:
+	{
+		"message": "Composition element added successfully"
+	}
