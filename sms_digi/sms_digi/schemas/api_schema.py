@@ -10,11 +10,11 @@ class UpdateCommoditySchema(colander.MappingSchema):
 
 class RemoveCommodityCompositionElementSchema(colander.MappingSchema):
     commodity_id = colander.SchemaNode(colander.Integer())
-    element_id = colander.SchemaNode(colander.Integer())
+    element_id = colander.SchemaNode(colander.Integer(), validator=colander.NoneOf([0]))
 
 
 class AddCommodityCompositionElementSchema(colander.MappingSchema):
     commodity_id = colander.SchemaNode(colander.Integer())
-    element_id = colander.SchemaNode(colander.Integer())
+    element_id = colander.SchemaNode(colander.Integer(), validator=colander.NoneOf([0]))
     percentage = colander.SchemaNode(colander.Float(), validator=colander.Range(0, 100))
 
