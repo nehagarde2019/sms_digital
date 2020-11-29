@@ -122,6 +122,7 @@ def update_commodity_by_id_view(request):
 
 async def remove_composition(request):
     try:
+        await asyncio.sleep(1)
         commodity_info = request.json_body
         commodity_id = commodity_info['commodity_id']
         element_id = commodity_info['element_id']
@@ -156,7 +157,7 @@ def remove_composition_by_id_view(request):
     if request.authenticated_userid:
         try:
             RemoveCommodityCompositionElementSchema().deserialize(request.json_body)
-            if remove_composition(request):
+            if loop.run_until_complete(remove_composition(request)):
                 return {'message': 'Composition removed Successfully.'}
             else:
                 return {'message': 'Composition could not be removed.'}
@@ -168,6 +169,7 @@ def remove_composition_by_id_view(request):
 
 async def add_composition(request):
     try:
+        await asyncio.sleep(1)
         commodity_info = request.json_body
         commodity_id = commodity_info['commodity_id']
         element_id = commodity_info['element_id']
@@ -187,18 +189,18 @@ async def add_composition(request):
                 new_comp.append({'id': element_id, 'percentage': percentage})
                 flag = True
             elif element_id == chemical['id'] and (total_percentage + percentage > 100):
-                return {'message': 'Cannot update. Total percentage exceeds 100. '}
+                return False
 
         if not flag and (total_percentage + percentage <= 100):
             new_comp.append({'id': element_id, 'percentage': percentage})
             total_percentage += percentage
         if not flag and (total_percentage + percentage > 100):
-            return {'message': 'Cannot update. Total percentage exceeds 100. '}
+            return False
 
         new_comp.append({'id': 0, 'percentage': 100 - total_percentage})
         request.dbsession.query(models.Commodity).filter(models.Commodity.id == commodity_id) \
             .update({'chemical_composition': new_comp})
-
+        return True
     except SQLAlchemyError as e:
         return Response(str(e), content_type='text/plain', status=500)
 
@@ -208,8 +210,10 @@ def add_composition_by_id_view(request):
     if request.authenticated_userid:
         try:
             AddCommodityCompositionElementSchema().deserialize(request.json_body)
-            if add_composition(request):
+            if loop.run_until_complete(add_composition(request)):
                 return {'message': 'Composition element added successfully'}
+            else:
+                return {'message': 'Percentage exceeds 100'}
         except colander.Invalid as e:
             return {'message': 'Invalid Input Parameters', 'details': str(e)}
     else:
