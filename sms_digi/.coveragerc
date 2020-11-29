@@ -1,0 +1,3 @@
+[run]
+source = sms_digi
+omit = sms_digi/test*
