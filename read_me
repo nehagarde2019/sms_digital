@@ -1,0 +1,22 @@
+Basic Setup
+	1. Create Project folder
+	2. create virtual environment
+
+Git:
+	1. move to project folder
+	2. git clone https://github.com/nehagarde2019/sms_digital.git
+	3. cd sms_digital
+	3. git checkout master
+
+Project Setup:
+	1. Activate virtual environment
+	Run the following commands
+	2. cd sms_digi (Folder containing setup.py)
+	3. pip install - e . #(Install Requirements)
+	4. Create database with any name and modify sqlalchemy.url line no.17 in settings file i.e development.ini file
+	5. alembic -c development.ini revision --autogenerate -m "init"
+	6. alembic -c development.ini upgrade head #(Create Tables)
+	7. initialize_sms_digi_db development.ini #Initialize Database
+	8. pserve development.ini #(run server)
+
+
