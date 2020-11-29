@@ -22,7 +22,7 @@ requires = [
     'zope.sqlalchemy',
     'psycopg2',
     'pyramid_jwt',
-    #'psycopg2-binary'
+    'colander',
 ]
 
 tests_require = [

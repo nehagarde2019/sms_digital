@@ -65,7 +65,7 @@ class Commodity(Base):
 
     id = sa.Column(sa.Integer, autoincrement=True, primary_key=True)
     name = sa.Column(sa.Text, nullable=False)
-    inventory = sa.Column(sa.BigInteger, nullable=False)
+    inventory = sa.Column(sa.Float, nullable=False)
     price = sa.Column(sa.Float, nullable=False)
     chemical_composition = sa.Column(JSONB, nullable=False)
     created_date = sa.Column(sa.DateTime, default=datetime.utcnow, server_default=sa.func.now(), nullable=False)

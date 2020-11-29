@@ -1,11 +1,13 @@
 import asyncio
 from datetime import datetime
 
+import colander
 from pyramid.view import view_config
 from pyramid.response import Response
 
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
-
+from sms_digi.schemas.api_schema import RemoveCommodityCompositionElementSchema, UpdateCommoditySchema, \
+    AddCommodityCompositionElementSchema
 from .. import models
 
 loop = asyncio.new_event_loop()
@@ -25,7 +27,7 @@ def login_view(request):
             return {'result': 'error', 'token': None}
     except DBAPIError:
         return Response("Error", content_type='text/plain', status=500)
-    return {'one': 'one', 'user_email': user.email, 'user_password': user.password}
+    return {'user_email': user.email, 'user_password': user.password}
 
 
 async def get_chemicals(request):
@@ -51,10 +53,10 @@ def get_all_chemicals_view(request):
         return {'message': "Unauthenticated user"}
 
 
-async def get_commodity(request, comm_id):
+async def get_commodity(request):
     try:
         await asyncio.sleep(1)
-        commodity_id = comm_id
+
         sql = """
                 SELECT comm.id,comm.name,comm.inventory,comm.price,
                 JSON_AGG(
@@ -63,7 +65,7 @@ async def get_commodity(request, comm_id):
                 FROM commodity comm
                 INNER JOIN LATERAL JSONB_ARRAY_ELEMENTS(comm.chemical_composition) AS e(comm) ON TRUE
                 INNER JOIN chemical c ON (e.comm->'id')::text::int = c.id
-                WHERE comm.id=""" + commodity_id + """
+                WHERE comm.id=""" + request.matchdict['id'] + """
                 group by comm.id
             """
         commodity = request.dbsession.execute(sql)
@@ -80,18 +82,24 @@ async def get_commodity(request, comm_id):
 @view_config(route_name='get_commodity_by_id', renderer='json', request_method='GET')
 def get_commodity_by_id_view(request):
     if request.authenticated_userid:
-        data_details = loop.run_until_complete(get_commodity(request, request.matchdict['id']))
+        data_details = loop.run_until_complete(get_commodity(request))
         return {'Commodity Details: ': data_details}
     else:
-        return {'message': "Unauthenticated user", 'time': datetime.datetime.now()}
+        return {'message': "Unauthenticated user"}
 
 
 async def update_commodity(request):
     try:
-        commodity_info = request.json_body
-        del commodity_info['id']
-        request.dbsession.query(models.Commodity).filter(models.Commodity.id == commodity_info['id']) \
-            .update(commodity_info)
+        await asyncio.sleep(1)
+        get_comm_object = request.dbsession.query(models.Commodity).\
+            filter(models.Commodity.id == request.json_body['id'])
+        commodity_exists = get_comm_object.all()
+        if commodity_exists:
+            commodity_info = request.json_body
+            del commodity_info['id']
+            get_comm_object.update(commodity_info)
+        else:
+            return False
     except SQLAlchemyError as e:
         return Response(str(e), content_type='text/plain', status=500)
     return True
@@ -100,8 +108,14 @@ async def update_commodity(request):
 @view_config(route_name='update_commodity_by_id', renderer='json', request_method='PUT')
 def update_commodity_by_id_view(request):
     if request.authenticated_userid:
-        if update_commodity(request):
-            return {"message": "Commodity updated Successfully"}
+        try:
+            UpdateCommoditySchema().deserialize(request.json_body)
+            if loop.run_until_complete(update_commodity(request)):
+                return {"message": "Commodity updated Successfully"}
+            else:
+                return {"message": "Commodity does not exist."}
+        except colander.Invalid as e:
+            return {'message': 'Invalid Input Parameters', 'details': str(e)}
     else:
         return {'message': "Unauthenticated user"}
 
@@ -113,18 +127,24 @@ async def remove_composition(request):
         element_id = commodity_info['element_id']
 
         chemical_composition = request.dbsession.query(models.Commodity). \
-            filter(models.Commodity.id == commodity_id).one_or_none().chemical_composition
+            filter(models.Commodity.id == commodity_id).all()
 
-        new_comp = []
-        total_percentage = 0
-        for chem_id, chemical in enumerate(chemical_composition):
-            if not (chemical['id'] == element_id or chemical['id'] == 0):
-                total_percentage += chemical['percentage']
-                new_comp.append(chemical)
-        new_comp.append({'id': 0, 'percentage': 100 - total_percentage})
+        if chemical_composition:
+            chemical_composition = request.dbsession.query(models.Commodity). \
+                filter(models.Commodity.id == commodity_id).one_or_none().chemical_composition
 
-        request.dbsession.query(models.Commodity).filter(models.Commodity.id == commodity_id) \
-            .update({'chemical_composition': new_comp})
+            new_comp = []
+            total_percentage = 0
+            for chem_id, chemical in enumerate(chemical_composition):
+                if not (chemical['id'] == element_id or chemical['id'] == 0):
+                    total_percentage += chemical['percentage']
+                    new_comp.append(chemical)
+            new_comp.append({'id': 0, 'percentage': 100 - total_percentage})
+
+            request.dbsession.query(models.Commodity).filter(models.Commodity.id == commodity_id) \
+                .update({'chemical_composition': new_comp})
+        else:
+            return False
 
     except SQLAlchemyError as e:
         return Response(str(e), content_type='text/plain', status=500)
@@ -134,8 +154,14 @@ async def remove_composition(request):
 @view_config(route_name='remove_composition_by_id', renderer='json', request_method='PUT')
 def remove_composition_by_id_view(request):
     if request.authenticated_userid:
-        if remove_composition(request):
-            return {'message': 'Composition removed Successfully'}
+        try:
+            RemoveCommodityCompositionElementSchema().deserialize(request.json_body)
+            if remove_composition(request):
+                return {'message': 'Composition removed Successfully.'}
+            else:
+                return {'message': 'Composition could not be removed.'}
+        except colander.Invalid as e:
+            return {'message': 'Invalid Input Parameters','details':str(e)}
     else:
         return {'message': 'Unauthenticated user'}
 
@@ -180,7 +206,11 @@ async def add_composition(request):
 @view_config(route_name='add_composition_by_id', renderer='json', request_method='PUT')
 def add_composition_by_id_view(request):
     if request.authenticated_userid:
-        if add_composition(request):
-            return {'message': 'Data updated successfully'}
+        try:
+            AddCommodityCompositionElementSchema().deserialize(request.json_body)
+            if add_composition(request):
+                return {'message': 'Composition element added successfully'}
+        except colander.Invalid as e:
+            return {'message': 'Invalid Input Parameters', 'details': str(e)}
     else:
         return {'message': 'Unauthenticated user'}
